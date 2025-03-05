@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# data
+/depth_images
+/rgb_images
+
 # C extensions
 *.so
 
