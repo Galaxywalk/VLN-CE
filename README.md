@@ -49,6 +49,14 @@ python -m pip install -r requirements.txt
 ```
 
 ### Data
+Please follow the same data download method like msra_robot_VN.
+The structure is:
+```graphql
+dataset
+├─ R2R_VLNCE_v1-3_preprocessed/
+├─ scene_datasets/mp3d/
+VLN-CE
+```
 
 #### Scenes: Matterport3D
 
