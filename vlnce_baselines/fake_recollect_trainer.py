@@ -27,6 +27,7 @@ with warnings.catch_warnings():
 
 from PIL import Image
 import numpy as np
+import json, gzip
 
 def collate_fn(batch):
     """Each sample in batch: (
@@ -131,6 +132,33 @@ class RecollectTrainer(BaseVLNCETrainer):
         if self.config.EVAL.SAVE_RESULTS:
             self._make_results_dir()
 
+    def add_ep_instruction(self, ep_id):
+
+        split = self.config.TASK_CONFIG.DATASET.SPLIT
+        gt_path = self.config.IL.RECOLLECT_TRAINER.gt_file.format(split=split)
+        trajectories_gt = json.load(gzip.open(gt_path, "rt"))
+
+        data_path = "../dataset/R2R_VLNCE_v1-3_preprocessed/train/train.json.gz"
+        trajectories_for_train = json.load(gzip.open(data_path, "rt"))
+
+        # current_instruction = ""
+        # for trajectory in trajectories_for_train:
+        #     if trajectory["episode_id"] == int(ep_id):
+        #         current_instruction = trajectory["instruction"]["instruction_text"]
+
+        # ✅ Create a mapping from episode_id to instruction for O(1) lookup
+        ep_to_instruction = {
+            traj["episode_id"]: traj["instruction"]["instruction_text"]
+            for traj in trajectories_for_train
+        }
+
+        ground_truth_states = trajectories_gt[str(ep_id)]['locations']
+        ground_truth_actions = np.diff(ground_truth_states, axis=0)
+        current_instruction = ep_to_instruction.get(int(ep_id), "")
+
+        return ground_truth_states, ground_truth_actions, current_instruction
+
+
     def train(self) -> None:
         split = self.config.TASK_CONFIG.DATASET.SPLIT
         self.config.defrost()
@@ -180,6 +208,19 @@ class RecollectTrainer(BaseVLNCETrainer):
             else range(batches_per_epoch)
         )
 
+        # load groundtruth dataset and episode instructions
+        split = self.config.TASK_CONFIG.DATASET.SPLIT
+        gt_path = self.config.IL.RECOLLECT_TRAINER.gt_file.format(split=split)
+        trajectories_gt = json.load(gzip.open(gt_path, "rt"))
+
+        data_path = self.config.TASK_CONFIG.DATASET.DATA_PATH.format(split=split)
+        trajectories_for_train = json.load(gzip.open(data_path, "rt"))
+
+        ep_to_instruction = {
+            int(traj["episode_id"]): traj["instruction"]["instruction_text"]
+            for traj in trajectories_for_train['episodes']
+        }
+
         for batch_idx in t:
             batch_time = time.time()
             batch_str = f"{batch_idx + 1}/{batches_per_epoch}"
@@ -202,25 +243,50 @@ class RecollectTrainer(BaseVLNCETrainer):
                 dataset.obs_transforms,
             )
 
-            save_dir = ("./rgb_images")
+            save_dir = self.config.DATASET_DIR
             os.makedirs(save_dir, exist_ok=True)
 
+            current_ep_dir = os.path.join(save_dir, 'ep'+str(episode_ids_batch[0]))
+            os.makedirs(current_ep_dir, exist_ok=True)
+
+            current_ep_dir_cam = os.path.join(current_ep_dir, 'cam0')
+            os.makedirs(current_ep_dir_cam, exist_ok=True)
+
+            current_ep_dir_depth = os.path.join(current_ep_dir, 'depth0')
+            os.makedirs(current_ep_dir_depth, exist_ok=True)
+
             rgb_tensor = observations_batch["rgb"].cpu().numpy()
+            depth_tensor = observations_batch["depth"].cpu().numpy()
             batch_size = rgb_tensor.shape[0]
 
             for i in range(batch_size):
                 rgb_img = rgb_tensor[i]
-                filename = os.path.join(save_dir, "episode_"+episode_ids_batch[0]+"trajectory_"+trajectory_ids_batch[0]+f"_sample{i}.png")
+                filename = os.path.join(current_ep_dir_cam, str(i)+".jpg")
                 Image.fromarray(rgb_img).save(filename)
-
-            save_dir = ("./depth_images")
-            os.makedirs(save_dir, exist_ok=True)
-
-            depth_tensor = observations_batch["depth"].cpu().numpy()
-            batch_size = depth_tensor.shape[0]
 
             for i in range(batch_size):
                 depth_image = depth_tensor[i]
-                filename = os.path.join(save_dir, "episode_"+episode_ids_batch[0]+"trajectory_"+trajectory_ids_batch[0]+f"_sample{i}.npz")
+                filename = os.path.join(current_ep_dir_depth, str(i)+".npz")
                 np.savez_compressed(filename, depth_image)
+
+
+            meta_json_path = os.path.join(current_ep_dir, 'meta.json')
+            meta_data = {}
+            ep_id = episode_ids_batch[0]
+            ground_truth_states = np.array(trajectories_gt[str(ep_id)]['locations'])[:,[0,2]]
+            ground_truth_actions = np.diff(ground_truth_states, axis=0)
+            ground_truth_actions = np.append(ground_truth_actions, [[0,0]], axis=0) # the final action is stop
+            current_instruction = ep_to_instruction.get(int(ep_id), "")
+
+            meta_data['episode_id'] = ep_id
+            meta_data['episode_length'] = batch_size
+            meta_data['command'] = current_instruction
+            meta_data["sensors"] = {"cam0": "cam0", "depth0": "depth"}
+            meta_data["actions"] = ground_truth_actions.tolist()
+            meta_data["states"] = ground_truth_states.tolist() 
+
+            with open(meta_json_path, 'w') as f:
+                json.dump(meta_data, f)
+        
+        
         dataset.close_sims()
