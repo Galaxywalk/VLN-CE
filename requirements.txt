@@ -2,7 +2,7 @@ attrs>=19.1.0
 dtw==1.4.0
 fastdtw==0.3.4
 gdown
-gym>=0.17.3
+gym==0.17.3
 jsonlines
 lmdb
 msgpack_numpy
@@ -12,7 +12,7 @@ pre-commit
 torch>=1.6.0
 torchvision==0.2.2.post3
 tqdm>=4.0.0
-tensorflow==1.13.1
+tensorflow
 tb-nightly
 yacs>=0.1.5
 Opencv-python>=3.3.0

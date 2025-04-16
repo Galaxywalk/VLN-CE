@@ -55,6 +55,7 @@ def collate_fn(batch):
     observations_batch = list(transposed[2])
     prev_actions_batch = list(transposed[3])
     corrected_actions_batch = list(transposed[4])
+    states_batch = list(transposed[5])
     weights_batch = list(transposed[5])
     B = len(prev_actions_batch)
 
@@ -105,8 +106,9 @@ def collate_fn(batch):
         trajectory_ids_batch,
         observations_batch,
         prev_actions_batch.view(-1, 1),
-        not_done_masks.view(-1, 1),
         corrected_actions_batch,
+        states_batch,
+        not_done_masks.view(-1, 1),
         weights_batch,
     )
 
@@ -230,8 +232,9 @@ class RecollectTrainer(BaseVLNCETrainer):
                 trajectory_ids_batch,
                 observations_batch,
                 prev_actions_batch,
-                not_done_masks,
                 corrected_actions_batch,
+                states_batch,
+                not_done_masks,
                 weights_batch,
             ) = next(diter)
 
@@ -273,15 +276,40 @@ class RecollectTrainer(BaseVLNCETrainer):
             meta_json_path = os.path.join(current_ep_dir, 'meta.json')
             meta_data = {}
             ep_id = episode_ids_batch[0]
-            ground_truth_states = np.array(trajectories_gt[str(ep_id)]['locations'])[:,[0,2]]
-            ground_truth_actions = np.diff(ground_truth_states, axis=0)
-            ground_truth_actions = np.append(ground_truth_actions, [[0,0]], axis=0) # the final action is stop
+            ground_truth_locations = np.array(trajectories_gt[str(ep_id)]['locations'])[:,[0,2]]
+            ground_truth_actions = np.array(trajectories_gt[str(ep_id)]['actions']) # 0 is stop, 1 is forward 0.25 m, 2 is left 15 degree, 3 is right 15 degree
+            ground_truth_states = states_batch[0].numpy()
             current_instruction = ep_to_instruction.get(int(ep_id), "")
+
+            # infer the initial state from the first action and the second state
+            second_state = ground_truth_states[1]
+            first_action = ground_truth_actions[0]
+            if first_action == 0:
+                first_state = second_state
+            elif first_action == 1:
+                first_state = [
+                    second_state[0] - 0.25 * np.sin(second_state[2]),
+                    second_state[1] - 0.25 * np.cos(second_state[2]),
+                    second_state[2]
+                ]
+            elif first_action == 2:
+                first_state = [
+                    second_state[0],
+                    second_state[1],
+                    second_state[2] - np.pi / 12
+                ]
+            elif first_action == 3:
+                first_state = [
+                    second_state[0],
+                    second_state[1],
+                    second_state[2] + np.pi / 12
+                ]
+            ground_truth_states[0] = first_state
 
             meta_data['episode_id'] = ep_id
             meta_data['episode_length'] = batch_size
             meta_data['command'] = current_instruction
-            meta_data["sensors"] = {"cam0": "cam0", "depth0": "depth"}
+            meta_data["sensors"] = {"cam0": "cam0", "depth0": "depth0"}
             meta_data["actions"] = ground_truth_actions.tolist()
             meta_data["states"] = ground_truth_states.tolist() 
 

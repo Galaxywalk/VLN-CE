@@ -73,6 +73,8 @@ class FakeTeacherRecollectionDataset(torch.utils.data.IterableDataset):
             observations,
             self.config.TASK_CONFIG.TASK.INSTRUCTION_SENSOR_UUID,
         )
+
+
         for i, ep in enumerate(self.envs.current_episodes()):
             path_step = self.trajectories[ep.episode_id][0]
             self._env_observations[i].append(
@@ -80,6 +82,7 @@ class FakeTeacherRecollectionDataset(torch.utils.data.IterableDataset):
                     observations[i],
                     path_step[0],  # prev_action
                     path_step[2],  # oracle_action
+                    [0, 0, 0],  # initial state is unknown
                 )
             )
 
@@ -206,6 +209,7 @@ class FakeTeacherRecollectionDataset(torch.utils.data.IterableDataset):
                             [o[0] for o in self._env_observations[i]],
                             [o[1] for o in self._env_observations[i]],
                             [o[2] for o in self._env_observations[i]],
+                            [o[3] for o in self._env_observations[i]], # state
                         )
                     )
                     self._env_observations[i] = []
@@ -214,11 +218,15 @@ class FakeTeacherRecollectionDataset(torch.utils.data.IterableDataset):
                 path_step = self.trajectories[current_episodes[i].episode_id][
                     self.env_step[i]
                 ]
+                heading = observations[i]["heading"]
+                position = observations[i]["agent_position"]
+                agent_state = [position[0], position[2], heading[0]]
                 self._env_observations[i].append(
                     (
                         observations[i],
                         path_step[0],  # prev_action
                         path_step[2],  # oracle_action
+                        agent_state  # state
                     )
                 )                        
                 assert (
@@ -233,7 +241,7 @@ class FakeTeacherRecollectionDataset(torch.utils.data.IterableDataset):
         size of 5. For this reason, we probably don't need to use extra workers.
         """
         x = self._load_next()
-        episode, trajectory, obs, prev_actions, oracle_actions = x
+        episode, trajectory, obs, prev_actions, oracle_actions, states = x
 
         # transpose obs
         obs_t = defaultdict(list)
@@ -248,6 +256,7 @@ class FakeTeacherRecollectionDataset(torch.utils.data.IterableDataset):
 
         prev_actions = torch.from_numpy(np.copy(prev_actions))
         oracle_actions = torch.from_numpy(np.copy(oracle_actions))
+        states = torch.from_numpy(np.copy(states))
 
         inflections = torch.cat(
             [
@@ -255,13 +264,13 @@ class FakeTeacherRecollectionDataset(torch.utils.data.IterableDataset):
                 (oracle_actions[1:] != oracle_actions[:-1]).long(),
             ]
         )
-
         return (
             episode,
             trajectory,
             obs_t,
             prev_actions,
             oracle_actions,
+            states,
             self.inflec_weights[inflections],
         )
 

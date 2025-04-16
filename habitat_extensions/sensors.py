@@ -194,3 +194,18 @@ class RxRInstructionSensor(Sensor):
         s = features["features"].shape
         feats[: s[0], : s[1]] = features["features"]
         return feats
+
+@registry.register_sensor(name="AGENT_POSITION_SENSOR")
+class AgentPositionSensor(Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._uuid = config.UUID  # 直接从 config 中取 UUID
+        self.uuid = config.UUID
+        self.observation_space = spaces.Box(low=-100.0, high=100.0, shape=(3,), dtype=np.float32)
+
+    def _get_uuid(self, *args, **kwargs):
+        return self._uuid
+
+    def get_observation(self, *args, **kwargs):
+        pos = self._sim.get_agent_state().position  # [x, y, z]
+        return np.array(pos, dtype=np.float32)

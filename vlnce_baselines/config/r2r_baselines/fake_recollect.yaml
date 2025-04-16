@@ -7,7 +7,7 @@ TENSORBOARD_DIR: data/tensorboard_dirs/cma
 CHECKPOINT_FOLDER: data/checkpoints/cma
 EVAL_CKPT_PATH_DIR: data/checkpoints/cma
 RESULTS_DIR: data/checkpoints/cma/evals
-DATASET_DIR: data/output_datasets/R2R_VLNCE_v1-3_preprocessed/
+DATASET_DIR: /datadisk/processed_r2r
 
 EVAL:
   USE_CKPT_CONFIG: False
