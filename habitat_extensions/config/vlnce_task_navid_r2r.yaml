@@ -3,36 +3,31 @@ ENVIRONMENT:
 SIMULATOR:
   ACTION_SPACE_CONFIG: v0
   AGENT_0:
-    SENSORS: [RGB_SENSOR, DEPTH_SENSOR]
+    SENSORS: [RGB_SENSOR]
   FORWARD_STEP_SIZE: 0.25
-  TURN_ANGLE: 15
+  TURN_ANGLE: 30
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
     ALLOW_SLIDING: True
   RGB_SENSOR:
-    WIDTH: 224
-    HEIGHT: 224
+    WIDTH: 640
+    HEIGHT: 480
     HFOV: 90
     TYPE: HabitatSimRGBSensor
-  DEPTH_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
+    POSITION: [0, 1.25, 0]
+
 TASK:
   TYPE: VLN-v0
   SUCCESS_DISTANCE: 3.0
   SENSORS: [
     INSTRUCTION_SENSOR,
     SHORTEST_PATH_SENSOR,
-    VLN_ORACLE_PROGRESS_SENSOR,
-    HEADING_SENSOR,
-    AGENT_POSITION_SENSOR
+    VLN_ORACLE_PROGRESS_SENSOR
   ]
-  AGENT_POSITION_SENSOR:
-    TYPE: AGENT_POSITION_SENSOR
-    UUID: agent_position
   INSTRUCTION_SENSOR_UUID: instruction
   POSSIBLE_ACTIONS: [STOP, MOVE_FORWARD, TURN_LEFT, TURN_RIGHT]
   MEASUREMENTS: [
+    TOP_DOWN_MAP_VLNCE,
     DISTANCE_TO_GOAL,
     SUCCESS,
     SPL,
@@ -46,9 +41,9 @@ TASK:
   SPL:
     SUCCESS_DISTANCE: 3.0
   NDTW:
-    GT_PATH: ../dataset/R2R_VLNCE_v1-3_preprocessed/{split}/{split}_gt.json.gz
+    GT_PATH: /home/v-boliang/github/dataset/R2R_VLNCE_v1-3_preprocessed/{split}/{split}_gt.json.gz
 DATASET:
   TYPE: VLN-CE-v1
-  SPLIT: val_seen
-  DATA_PATH: ../dataset/R2R_VLNCE_v1-3_preprocessed/{split}/{split}.json.gz
-  SCENES_DIR: ../dataset/scene_datasets/
+  SPLIT: val_unseen
+  DATA_PATH: /home/v-boliang/github/dataset/R2R_VLNCE_v1-3_preprocessed/{split}/{split}.json.gz
+  SCENES_DIR: /home/v-boliang/github/dataset/scene_datasets/

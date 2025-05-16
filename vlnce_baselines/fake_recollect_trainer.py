@@ -148,7 +148,7 @@ class RecollectTrainer(BaseVLNCETrainer):
         #     if trajectory["episode_id"] == int(ep_id):
         #         current_instruction = trajectory["instruction"]["instruction_text"]
 
-        # ✅ Create a mapping from episode_id to instruction for O(1) lookup
+        # Create a mapping from episode_id to instruction for O(1) lookup
         ep_to_instruction = {
             traj["episode_id"]: traj["instruction"]["instruction_text"]
             for traj in trajectories_for_train
