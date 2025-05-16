@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: VLN_CE/habitat_extensions/config/vlnce_task_navid_r2r.yaml
+BASE_TASK_CONFIG_PATH: vlnce/habitat_extensions/config/vlnce_task_navid_r2r.yaml
 EVAL:
     IDENTIFICATION: r2r
     SPLIT: val_unseen
