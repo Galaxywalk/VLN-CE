@@ -1,3 +1,22 @@
-[tool.black]
-line-length = 79
-target-version = ['py36']
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vlnce"
+version = "0.1.0"
+description = "Vision Language Navigation in Continuous Environments"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = [
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Galaxywalk/VLN-CE"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vlnce*"]
+
