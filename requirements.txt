@@ -16,3 +16,6 @@ tensorflow
 tb-nightly
 yacs>=0.1.5
 Opencv-python>=3.3.0
+webdataset==0.1.103
+Pillow==6.2.2
+imageio==2.9.0
